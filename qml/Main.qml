@@ -1,22 +1,43 @@
 import Felgo
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 
 App {
-    // You get free licenseKeys from https://felgo.com/licenseKey
-    // With a licenseKey you can:
-    //  * Publish your games & apps for the app stores
-    //  * Remove the Felgo Splash Screen or set a custom one (available with the Pro Licenses)
-    //  * Add plugins to monetize, analyze & improve your apps (available with the Pro Licenses)
-    //licenseKey: "<generate one from https://felgo.com/licenseKey>"
-
     NavigationStack {
 
         AppPage {
-            title: qsTr("Main Page")
+            title: qsTr("Chat")
 
-            Image {
-                source: "../assets/felgo-logo.png"
-                anchors.centerIn: parent
+            RowLayout {
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                    margins: 20
+                }
+
+                spacing: 8
+
+                AppTextField {
+                    id: inputMessage
+                    placeholderText: "Send a message"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+
+                    onAccepted: {
+                        console.log("Enter pressed")
+                    }
+                }
+
+                Button {
+                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: 45
+                    text: "➡️"
+                    onClicked: {
+                        console.log("Pressed")
+                    }
+                }
             }
         }
 
