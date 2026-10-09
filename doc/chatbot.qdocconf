@@ -1,0 +1,9 @@
+project = Chatbot
+description = Chatbot
+
+sourcedirs = .
+imagedirs = images
+outputdir = ../build/doc
+
+navigation.homepage = "Chatbot"
+navigation.hometitle = "Chatbot"

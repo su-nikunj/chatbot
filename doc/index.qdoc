@@ -1,0 +1,19 @@
+/*!
+    \page index.html
+    \title Chatbot
+
+    \brief An OpenAI compatible LLM chatbot written with QML and Felgo.
+
+    This demo shows how to build a chatgpt like AI chatbot that connects with any OpenAI
+    compatible API and can run on any platform using Felgo and Qt technologies.
+
+    \section1 Creating the project
+
+    Download the \l{Install Felgo}{felgo} SDK and create a new Single Page Application from the
+    new project dialog.
+
+    \image{new-project.png}{In the new project dialog, select Single Page Application from Felgo section}
+
+    This will create a simple demo project with everything needed to build the app for required
+    platforms up and running.
+*/
