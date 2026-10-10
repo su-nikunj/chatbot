@@ -50,7 +50,7 @@ cd doc
 <path to Qt/Felgo installation>/bin/qdoc chatbot.qdocconf
 ```
 
-The generated HTML ends up in `html` folder that is used by github pages.
+The generated HTML ends up in `docs` folder that is used by github pages.
 
 ## License
 

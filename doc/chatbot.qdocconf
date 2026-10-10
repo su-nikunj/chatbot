@@ -3,7 +3,7 @@ description = Chatbot
 
 sourcedirs = .
 imagedirs = images
-outputdir = ../html
+outputdir = ../docs
 
 navigation.homepage = "Chatbot"
 navigation.hometitle = "Chatbot"
