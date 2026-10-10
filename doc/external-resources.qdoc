@@ -2,3 +2,31 @@
     \externalpage https://felgo.com/doc/felgo-installation/
     \title Install Felgo
 */
+/*!
+    \externalpage https://felgo.com/doc/felgo-httprequest/
+    \title HttpRequest
+*/
+/*!
+    \externalpage https://felgo.com/doc/felgo-storage/
+    \title Storage
+*/
+/*!
+    \externalpage https://felgo.com/doc/felgo-app/
+    \title App
+*/
+/*!
+    \externalpage https://felgo.com/doc/felgo-apptextfield/
+    \title AppTextField
+*/
+/*!
+    \externalpage https://felgo.com/doc/felgo-applistview/
+    \title AppListView
+*/
+/*!
+    \externalpage https://felgo.com/doc/qt/qml-qtquick-controls-combobox/
+    \title ComboBox
+*/
+/*!
+    \externalpage https://platform.openai.com/docs/api-reference/chat/create
+    \title OpenAI Chat API Reference
+*/
