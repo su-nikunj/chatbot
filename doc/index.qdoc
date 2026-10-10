@@ -363,14 +363,14 @@
     \code
     chatApi.request(apiUrl, apiKey, apiModel,
                     chatApi.listModelToArray(chatMessages),
-                    function(answer) {
+                    answer => {
                         removeTypingIndicator()
                         app.busy = false
                         chatMessages.append({ role: "assistant", content: answer })
                         chatView.scrollToBottom()
                         saveHistory()
                     },
-                    function(error) {
+                    error => {
                         removeTypingIndicator()
                         app.busy = false
                         chatMessages.append({ role: "error", content: error })
@@ -469,7 +469,7 @@
                 history.push({ role: item.role, content: item.content })
         }
 
-        app.settings.setValue("chatHistory", JSON.stringify(history))
+        app.settings.setValue(chatHistoryKey, JSON.stringify(history))
     }
     \endcode
 
@@ -491,6 +491,18 @@
         \li Trimming the sent history to the last N messages to stay within the context window.
         \li A context menu on chat bubbles to copy or delete single messages.
         \li Rendering markdown in assistant messages.
+    \endlist
+
+    \section1 Appendix: Publishing and protecting the source
+
+    For a release build you may want to compile the QML files into the binary instead of
+    shipping them as plain text files in the app package. The steps are already prepared as
+    comments in the \c CMakeLists.txt file:
+
+    \list
+        \li Comment the \c deploy_resources() call.
+        \li Uncomment \c QML_FILES and \c RESOURCES in the \c qt_add_qml_module() call.
+        \li In \c main.cpp, switch \c setMainQmlFileName() to \c "qrc:/qml/Main.qml".
     \endlist
 
     This demo contains no secrets in its code: the API key is entered by the user and lives
