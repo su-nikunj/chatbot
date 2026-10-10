@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- index.qdoc -->
+  <meta name="description" content="An OpenAI compatible LLM chatbot written with QML and Felgo.">
+  <title>Chatbot</title>
+</head>
+<body>
+<h1 class="title">Chatbot</h1>
+<!-- $$$index.html-description -->
+<div class="descr" id="details">
+<p>This demo shows how to build a chatgpt like AI chatbot that connects with any OpenAI compatible API and can run on any platform using Felgo and Qt technologies.</p>
+<p>The tutorial follows the same order in which the app was built: we start with an empty project, create the UI, store the API configuration, connect to the API and finally add the finishing touches like a typing indicator and persistent chat history. You can follow along step by step, the complete source is also available in this repository.</p>
+<h2 id="introduction">Introduction</h2>
+<p>The finished app talks to any <a href="https://platform.openai.com/docs/api-reference/chat/create">OpenAI compatible API</a>. That includes the OpenAI platform itself, but also local servers like LM Studio, Ollama or llama.cpp, which all expose the same <code translate="no">/v1/chat/completions</code> and <code translate="no">/v1/models</code> endpoints. This makes the app a nice client for locally running models.</p>
+<p>The app consists of five QML files, each with a single responsibility:</p>
+<ul>
+<li><code translate="no">Main.qml</code> - the app shell, the chat logic and the chat persistence.</li>
+<li><code translate="no">ChatApi.qml</code> - everything related to the HTTP calls, without any UI.</li>
+<li><code translate="no">ChatView.qml</code> - a reusable list of chat bubbles.</li>
+<li><code translate="no">InputBar.qml</code> - the message input row with the send button.</li>
+<li><code translate="no">SettingsDialog.qml</code> - the API configuration dialog with a model dropdown.</li>
+</ul>
+<p>Splitting the app this way keeps each file easy to read: the UI components (<code translate="no">ChatView</code>, <code translate="no">InputBar</code>, <code translate="no">SettingsDialog</code>) do not know anything about the API, and <code translate="no">ChatApi</code> does not know anything about the UI. <code translate="no">Main.qml</code> connects the pieces.</p>
+<h2 id="creating-the-project">Creating the project</h2>
+<p>Download the <a href="https://felgo.com/doc/felgo-installation/">felgo</a> SDK and create a new Single Page Application from the new project dialog.</p>
+<p class="centerAlign"><img src="images/screenshot-new-project.png" alt="{The Felgo new project dialog with &quot;Single Page Application&quot; selected.}" /></p><p>This will create a simple demo project with everything needed to build the app for required platforms up and running.</p>
+<h2 id="the-app-shell-main-qml">The app shell: Main.qml</h2>
+<p>The <a href="https://felgo.com/doc/felgo-app/">App</a> type is the root item of every Felgo app. Inside it we use a <code translate="no">NavigationStack</code> with a single <code translate="no">AppPage</code>, which gives us a header with a title and space for action buttons.</p>
+<p>We add two actions to the header: a cog icon that opens the settings dialog and a trash icon that clears the conversation. Below the page we place a <code translate="no">ChatView</code> (covered in the next section) and the <code translate="no">InputBar</code> with the text field and the send button, anchored to the bottom of the screen.</p>
+<pre class="cpp" translate="no">NavigationStack {
+
+    AppPage {
+        title: qsTr(<span class="string">&quot;Chatbot&quot;</span>)
+
+        rightBarItem: IconButtonBarItem {
+            iconType: IconType<span class="operator">.</span>cog
+            title: <span class="string">&quot;Settings&quot;</span>
+
+            onClicked: settingsDialog<span class="operator">.</span>open()
+        }
+
+        leftBarItem: IconButtonBarItem {
+            iconType: IconType<span class="operator">.</span>trash
+            title: <span class="string">&quot;Clear chat&quot;</span>
+
+            onClicked: clearDialog<span class="operator">.</span>open()
+        }
+
+        SettingsDialog {
+            id: settingsDialog
+            settingsStore: app<span class="operator">.</span>settings
+        }
+
+        ChatView {
+            id: chatView
+            anchors {
+                top: parent<span class="operator">.</span>top
+                left: parent<span class="operator">.</span>left
+                right: parent<span class="operator">.</span>right
+                bottom: messageInput<span class="operator">.</span>top
+                margins: dp(<span class="number">20</span>)
+            }
+
+            messages: chatMessages
+        }
+
+        InputBar {
+            id: messageInput
+
+            anchors {
+                left: parent<span class="operator">.</span>left
+                right: parent<span class="operator">.</span>right
+                bottom: parent<span class="operator">.</span>bottom
+                margins: dp(<span class="number">20</span>)
+            }
+
+            busy: app<span class="operator">.</span>busy
+
+            onSendRequested: message <span class="operator">=</span><span class="operator">&gt;</span> sendMessage(message)
+        }
+    }
+
+}</pre>
+<p>The <code translate="no">InputBar</code> only collects the user input and reports it with its <code translate="no">sendRequested</code> signal. The <code translate="no">busy</code> property disables the input while the app waits for an API response, so the user cannot send a second message while the first one is still pending. The component itself looks like this:</p>
+<pre class="cpp" translate="no">Row {
+    id: root
+
+    property <span class="type">bool</span> busy: <span class="keyword">false</span>
+
+    signal sendRequested(string message)
+
+    spacing: dp(<span class="number">8</span>)
+    height: dp(<span class="number">45</span>)
+
+    function submit() {
+        sendRequested(inputMessage<span class="operator">.</span>text<span class="operator">.</span>trim())
+        inputMessage<span class="operator">.</span>text <span class="operator">=</span> <span class="string">&quot;&quot;</span>
+    }
+
+    AppTextField {
+        id: inputMessage
+        placeholderText: <span class="string">&quot;Send a message&quot;</span>
+        width: root<span class="operator">.</span>width <span class="operator">-</span> sendButton<span class="operator">.</span>width <span class="operator">-</span> root<span class="operator">.</span>spacing
+        height: dp(<span class="number">45</span>)
+        enabled: <span class="operator">!</span>root<span class="operator">.</span>busy
+
+        onAccepted: root<span class="operator">.</span>submit()
+    }
+
+    AppButton {
+        id: sendButton
+
+        width: dp(<span class="number">100</span>)
+        height: dp(<span class="number">45</span>)
+        text: root<span class="operator">.</span>busy <span class="operator">?</span> <span class="string">&quot;...&quot;</span> : <span class="string">&quot;➡️&quot;</span>
+        enabled: <span class="operator">!</span>root<span class="operator">.</span>busy
+
+        onClicked: root<span class="operator">.</span>submit()
+    }
+}</pre>
+<p class="centerAlign"><img src="images/screenshot-app-shell.png" alt="{The empty app with the header bar and the input row.}" /></p><h2 id="displaying-the-messages-chatview-qml">Displaying the messages: ChatView.qml</h2>
+<p>The chat itself lives in <code translate="no">ChatView.qml</code>, a plain <code translate="no">Item</code> that receives the message model as a required property. Inside it, an <a href="https://felgo.com/doc/felgo-applistview/">AppListView</a> renders every entry of the model as a chat bubble.</p>
+<p>Each message is a <code translate="no">ListModel</code> entry with a <code translate="no">role</code> and a <code translate="no">content</code> field. The roles are:</p>
+<ul>
+<li><code translate="no">system</code> - the instruction for the model, never rendered.</li>
+<li><code translate="no">user</code> - a message from the user, blue bubble on the right.</li>
+<li><code translate="no">assistant</code> - an answer from the model, green bubble on the left.</li>
+<li><code translate="no">typing</code> - internal placeholder shown while waiting for the API.</li>
+<li><code translate="no">error</code> - a failed request, red bubble on the left.</li>
+</ul>
+<pre class="cpp" translate="no">delegate: Item {
+    id: messageDelegate
+
+    required property string role
+    required property string content
+
+    width: chatView<span class="operator">.</span>width
+
+    height: role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;user&quot;</span> <span class="operator">|</span><span class="operator">|</span> role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;assistant&quot;</span> <span class="operator">|</span><span class="operator">|</span> role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;error&quot;</span> <span class="operator">?</span> bubble<span class="operator">.</span>height
+          : role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;typing&quot;</span> <span class="operator">?</span> typingBubble<span class="operator">.</span>height
+          : <span class="number">0</span>
+
+    Rectangle {
+        id: bubble
+        visible: messageDelegate<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;user&quot;</span>
+                 <span class="operator">|</span><span class="operator">|</span> messageDelegate<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;assistant&quot;</span>
+                 <span class="operator">|</span><span class="operator">|</span> messageDelegate<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;error&quot;</span>
+
+        property <span class="type">bool</span> isMe: messageDelegate<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;user&quot;</span>
+
+        width: Math<span class="operator">.</span>min(
+                   messageText<span class="operator">.</span>implicitWidth <span class="operator">+</span> dp(<span class="number">24</span>)<span class="operator">,</span>
+                   messageDelegate<span class="operator">.</span>width <span class="operator">*</span> <span class="number">0.75</span>)
+        height: messageText<span class="operator">.</span>implicitHeight <span class="operator">+</span> dp(<span class="number">20</span>)
+
+        radius: dp(<span class="number">14</span>)
+        color: isMe <span class="operator">?</span> <span class="string">&quot;#2878f0&quot;</span>
+              : messageDelegate<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;error&quot;</span> <span class="operator">?</span> <span class="string">&quot;#c62828&quot;</span>
+              : <span class="string">&quot;#1f8b03&quot;</span>
+
+        anchors<span class="operator">.</span>right: isMe <span class="operator">?</span> parent<span class="operator">.</span>right : undefined
+        anchors<span class="operator">.</span>left: isMe <span class="operator">?</span> undefined : parent<span class="operator">.</span>left
+
+        AppText {
+            id: messageText
+
+            anchors<span class="operator">.</span>fill: parent
+            anchors<span class="operator">.</span>margins: dp(<span class="number">12</span>)
+
+            text: messageDelegate<span class="operator">.</span>content
+            color: <span class="string">&quot;white&quot;</span>
+
+            wrapMode: Text<span class="operator">.</span>Wrap
+            font<span class="operator">.</span>pixelSize: sp(<span class="number">15</span>)
+        }
+    }
+    <span class="comment">// ... the typing indicator bubble follows here, see the section below</span>
+}</pre>
+<p>The system message gets a delegate height of <code translate="no">0</code>, so it exists in the model for the API but never appears in the UI. Error bubbles are excluded from the conversation that we send back to the API, which is covered in the section about the request.</p>
+<p class="centerAlign"><img src="images/screenshot-chat-bubbles.png" alt="{A short conversation with one user message, one assistant answer and one red error bubble}" /></p><h2 id="remembering-the-configuration-settingsdialog-qml">Remembering the configuration: SettingsDialog.qml</h2>
+<p>The app needs three pieces of configuration: the API base URL, the API key and the model name. We store them with the <a href="https://felgo.com/doc/felgo-storage/">Storage</a> component, which Felgo provides on every <a href="https://felgo.com/doc/felgo-app/">App</a> as <code translate="no">app.settings</code>. Values written there survive app restarts.</p>
+<p>The dialog exposes its storage keys as readonly properties:</p>
+<pre class="cpp" translate="no">readonly property string apiUrl: <span class="string">&quot;apiUrl&quot;</span>
+readonly property string apiKey: <span class="string">&quot;apiKey&quot;</span>
+readonly property string apiModel: <span class="string">&quot;apiModel&quot;</span></pre>
+<p>This way <code translate="no">Main.qml</code> can read and write the same values without duplicating the key strings: <code translate="no">app.settings.getValue(settingsDialog.apiUrl)</code>.</p>
+<p>The dialog loads the stored values every time it opens and writes them back when the user presses Save. Invalid input (empty fields) is rejected with a red error text below the fields.</p>
+<p class="centerAlign"><img src="images/screenshot-settings-dialog.png" alt="{The settings dialog with all fields filled}" /></p><h2 id="choosing-a-model-the-model-dropdown">Choosing a model: the model dropdown</h2>
+<p>Instead of typing a model name manually, the settings dialog can fetch the list of available models from the server. Every OpenAI compatible API exposes a <code translate="no">/models</code> endpoint which answers with a list like this:</p>
+<pre class="cpp" translate="no">{
+  <span class="string">&quot;object&quot;</span>: <span class="string">&quot;list&quot;</span><span class="operator">,</span>
+  <span class="string">&quot;data&quot;</span>: <span class="operator">[</span>
+    { <span class="string">&quot;id&quot;</span>: <span class="string">&quot;gpt-4o&quot;</span><span class="operator">,</span> <span class="string">&quot;object&quot;</span>: <span class="string">&quot;model&quot;</span><span class="operator">,</span> <span class="operator">.</span><span class="operator">.</span><span class="operator">.</span> }<span class="operator">,</span>
+    { <span class="string">&quot;id&quot;</span>: <span class="string">&quot;gpt-4o-mini&quot;</span><span class="operator">,</span> <span class="string">&quot;object&quot;</span>: <span class="string">&quot;model&quot;</span><span class="operator">,</span> <span class="operator">.</span><span class="operator">.</span><span class="operator">.</span> }
+  <span class="operator">]</span>
+}</pre>
+<p>A press on the <code translate="no">Fetch</code> button next to the dropdown sends a <code translate="no">GET</code> request to <code translate="no">&lt;baseURL&gt;/models</code> with the same authorization header as the chat requests:</p>
+<pre class="cpp" translate="no">HttpRequest
+    <span class="operator">.</span>get(url <span class="operator">+</span> <span class="string">&quot;/models&quot;</span>)
+    <span class="operator">.</span>timeout(<span class="number">10000</span>)
+    <span class="operator">.</span>set(<span class="string">&quot;Authorization&quot;</span><span class="operator">,</span> <span class="string">&quot;Bearer &quot;</span> <span class="operator">+</span> key)
+    <span class="operator">.</span>then(res <span class="operator">=</span><span class="operator">&gt;</span> {
+        <span class="comment">// extract res.body.data[].id</span>
+    })<span class="operator">.</span><span class="keyword">catch</span>(err <span class="operator">=</span><span class="operator">&gt;</span> {
+        <span class="comment">// show error text</span>
+    })</pre>
+<p>The fetched ids fill a standard <a href="https://felgo.com/doc/qt/qml-qtquick-controls-combobox/">ComboBox</a> from Qt Quick Controls with <code translate="no">editable</code> set to <code translate="no">true</code>. The editable property is important: if the fetch fails or the server does not implement <code translate="no">/models</code>, the user can still type a model name manually and the app keeps working.</p>
+<p>Fetching the model list doubles as a connection test: if the request succeeds, we know that the URL and the key are valid.</p>
+<p>The fetched list is also cached in the settings store, so the dropdown is filled again after the next app start without a new request.</p>
+<h2 id="talking-to-the-api-chatapi-qml">Talking to the API: ChatApi.qml</h2>
+<p>The HTTP calls live in their own component, <code translate="no">ChatApi.qml</code>, which contains no UI at all. Keeping them separate from <code translate="no">Main.qml</code> makes both files easier to read and lets you swap the API part without touching the interface.</p>
+<p>Sending a message is a single POST request to <code translate="no">&lt;baseURL&gt;/chat/completions</code>. The base URL usually ends with <code translate="no">/v1</code>, for example <code translate="no">https://api.openai.com/v1</code> or <code translate="no">http://localhost:1234/v1</code> for a local LM Studio server. The app simply appends the endpoint path to whatever URL is configured, so the <code translate="no">/v1</code> part is part of the base URL.</p>
+<p>We use Felgo's <a href="https://felgo.com/doc/felgo-httprequest/">HttpRequest</a> type, a promise based REST client. The component offers a single <code translate="no">request()</code> function that reports the result with an <code translate="no">onSuccess</code> or <code translate="no">onError</code> callback:</p>
+<pre class="cpp" translate="no">function request(url<span class="operator">,</span> apiKey<span class="operator">,</span> model<span class="operator">,</span> messages<span class="operator">,</span> onSuccess<span class="operator">,</span> onError) {
+    <span class="keyword">const</span> chatUrl <span class="operator">=</span> url<span class="operator">.</span>replace(<span class="operator">/</span>\<span class="operator">/</span><span class="operator">+</span>$<span class="operator">/</span><span class="operator">,</span> <span class="string">&quot;&quot;</span>) <span class="operator">+</span> <span class="string">&quot;/chat/completions&quot;</span>
+
+    HttpRequest
+        <span class="operator">.</span>post(chatUrl)
+        <span class="operator">.</span>timeout(<span class="number">30000</span>)
+        <span class="operator">.</span>set(<span class="string">&quot;Content-Type&quot;</span><span class="operator">,</span> <span class="string">&quot;application/json&quot;</span>)
+        <span class="operator">.</span>set(<span class="string">&quot;Authorization&quot;</span><span class="operator">,</span> `Bearer ${apiKey}`)
+        <span class="operator">.</span>send({
+                  model: model<span class="operator">,</span>
+                  messages: messages<span class="operator">,</span>
+                  temperature: <span class="number">0.7</span>
+              })
+        <span class="operator">.</span>then(res <span class="operator">=</span><span class="operator">&gt;</span> {
+            <span class="comment">// validate the answer and call onSuccess</span>
+        })<span class="operator">.</span><span class="keyword">catch</span>(err <span class="operator">=</span><span class="operator">&gt;</span> onError(requestErrorMessage(err)))
+}</pre>
+<p>The <code translate="no">messages</code> array is the complete conversation, built from the <code translate="no">ListModel</code> with <code translate="no">listModelToArray()</code>. This function filters the model entries: only the roles the API actually understands (<code translate="no">system</code>, <code translate="no">user</code>, <code translate="no">assistant</code>) are sent, and each entry is reduced to exactly the two fields <code translate="no">role</code> and <code translate="no">content</code>. Without this filter, internal entries like the typing indicator or the error bubbles would end up in the request and the API would reject it with a validation error.</p>
+<pre class="cpp" translate="no">function listModelToArray(model) {
+    <span class="keyword">const</span> allowedRoles <span class="operator">=</span> <span class="operator">[</span> <span class="string">&quot;system&quot;</span><span class="operator">,</span> <span class="string">&quot;user&quot;</span><span class="operator">,</span> <span class="string">&quot;assistant&quot;</span> <span class="operator">]</span>
+
+    let result <span class="operator">=</span> <span class="operator">[</span><span class="operator">]</span>
+
+    <span class="keyword">for</span> (let i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> model<span class="operator">.</span>count; i<span class="operator">+</span><span class="operator">+</span>) {
+        <span class="keyword">const</span> item <span class="operator">=</span> model<span class="operator">.</span>get(i)
+
+        <span class="keyword">if</span> (allowedRoles<span class="operator">.</span>indexOf(item<span class="operator">.</span>role) <span class="operator">!</span><span class="operator">=</span><span class="operator">=</span> <span class="operator">-</span><span class="number">1</span>)
+            result<span class="operator">.</span>push({ role: item<span class="operator">.</span>role<span class="operator">,</span> content: item<span class="operator">.</span>content })
+    }
+
+    <span class="keyword">return</span> result
+}</pre>
+<p>The system prompt from the beginning of the conversation is part of every request, so the model keeps its instruction for the whole chat.</p>
+<p>In <code translate="no">Main.qml</code>, sending a message is then reduced to appending the user message, showing the typing indicator and handing everything over to the API component:</p>
+<pre class="cpp" translate="no">chatApi<span class="operator">.</span>request(apiUrl<span class="operator">,</span> apiKey<span class="operator">,</span> apiModel<span class="operator">,</span>
+                chatApi<span class="operator">.</span>listModelToArray(chatMessages)<span class="operator">,</span>
+                answer <span class="operator">=</span><span class="operator">&gt;</span> {
+                    removeTypingIndicator()
+                    app<span class="operator">.</span>busy <span class="operator">=</span> <span class="keyword">false</span>
+                    chatMessages<span class="operator">.</span>append({ role: <span class="string">&quot;assistant&quot;</span><span class="operator">,</span> content: answer })
+                    chatView<span class="operator">.</span>scrollToBottom()
+                    saveHistory()
+                }<span class="operator">,</span>
+                error <span class="operator">=</span><span class="operator">&gt;</span> {
+                    removeTypingIndicator()
+                    app<span class="operator">.</span>busy <span class="operator">=</span> <span class="keyword">false</span>
+                    chatMessages<span class="operator">.</span>append({ role: <span class="string">&quot;error&quot;</span><span class="operator">,</span> content: error })
+                    chatView<span class="operator">.</span>scrollToBottom()
+                })</pre>
+<h2 id="the-typing-indicator-and-error-handling">The typing indicator and error handling</h2>
+<p>While the request is pending, the model is thinking and the user sees a placeholder bubble with three blinking dots. The placeholder is a normal model entry with the internal role <code translate="no">typing</code>:</p>
+<pre class="cpp" translate="no">chatMessages<span class="operator">.</span>append({ role: <span class="string">&quot;typing&quot;</span><span class="operator">,</span> content: <span class="string">&quot;&quot;</span> })</pre>
+<p>The dots are three small <code translate="no">Rectangle</code> items in a <code translate="no">Row</code>, animated with a staggered <code translate="no">SequentialAnimation</code> on their opacity:</p>
+<pre class="cpp" translate="no">Repeater {
+    model: <span class="number">3</span>
+
+    Rectangle {
+        width: dp(<span class="number">8</span>)
+        height: dp(<span class="number">8</span>)
+        radius: dp(<span class="number">4</span>)
+        color: <span class="string">&quot;white&quot;</span>
+        opacity: <span class="number">0.3</span>
+
+        SequentialAnimation on opacity {
+            loops: Animation<span class="operator">.</span>Infinite
+
+            PauseAnimation { duration: index <span class="operator">*</span> <span class="number">200</span> }
+            NumberAnimation { from: <span class="number">0.3</span>; to: <span class="number">1.0</span>; duration: <span class="number">250</span> }
+            NumberAnimation { from: <span class="number">1.0</span>; to: <span class="number">0.3</span>; duration: <span class="number">250</span> }
+            PauseAnimation { duration: <span class="number">700</span> }
+        }
+    }
+}</pre>
+<p>As soon as the response arrives, the placeholder is removed and replaced with the whole message at once. Since the input is disabled while a request is pending, the typing bubble is always the last entry of the model, which makes removing it trivial:</p>
+<pre class="cpp" translate="no">function removeTypingIndicator() {
+    <span class="keyword">const</span> last <span class="operator">=</span> chatMessages<span class="operator">.</span>get(chatMessages<span class="operator">.</span>count <span class="operator">-</span> <span class="number">1</span>)
+
+    <span class="keyword">if</span> (last <span class="operator">&amp;</span><span class="operator">&amp;</span> last<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;typing&quot;</span>)
+        chatMessages<span class="operator">.</span>remove(chatMessages<span class="operator">.</span>count <span class="operator">-</span> <span class="number">1</span>)
+}</pre>
+<p>Errors appear as red bubbles in the chat, so the user always sees what went wrong. The error message is built from the request error: if the server sent a description (for example for an invalid API key), we show it, otherwise we fall back to a generic message. The <code translate="no">requestErrorMessage()</code> function also lives in <code translate="no">ChatApi.qml</code>, next to the request it describes.</p>
+<pre class="cpp" translate="no">function requestErrorMessage(err) {
+    <span class="keyword">const</span> body <span class="operator">=</span> err <span class="operator">&amp;</span><span class="operator">&amp;</span> err<span class="operator">.</span>response <span class="operator">?</span> err<span class="operator">.</span>response<span class="operator">.</span>body : null
+
+    <span class="keyword">if</span> (body <span class="operator">&amp;</span><span class="operator">&amp;</span> body<span class="operator">.</span>error <span class="operator">&amp;</span><span class="operator">&amp;</span> body<span class="operator">.</span>error<span class="operator">.</span>message)
+        <span class="keyword">return</span> body<span class="operator">.</span>error<span class="operator">.</span>message
+
+    <span class="keyword">if</span> (err <span class="operator">&amp;</span><span class="operator">&amp;</span> err<span class="operator">.</span>status <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="number">0</span>)
+        <span class="keyword">return</span> <span class="string">&quot;Could not reach the server. Check the API URL and your connection.&quot;</span>
+
+    <span class="keyword">return</span> err <span class="operator">&amp;</span><span class="operator">&amp;</span> err<span class="operator">.</span>message <span class="operator">?</span> err<span class="operator">.</span>message : <span class="string">&quot;Request failed. Please try again.&quot;</span>
+}</pre>
+<p>In addition, the response itself is validated before it is used: if the answer does not contain <code translate="no">choices[0].message</code>, the user gets an &quot;unexpected response&quot; error instead of a JavaScript exception.</p>
+<p class="centerAlign"><img src="images/screenshot-typing-indicator.png" alt="{The typing indicator bubble visible in the chat while a request is pending}" /></p><h2 id="keeping-the-conversation">Keeping the conversation</h2>
+<p>The chat history is stored in the settings store as a JSON string, so the conversation survives an app restart. Saving happens after every new message:</p>
+<pre class="cpp" translate="no">function saveHistory() {
+    let history <span class="operator">=</span> <span class="operator">[</span><span class="operator">]</span>
+
+    <span class="keyword">for</span> (let i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> chatMessages<span class="operator">.</span>count; i<span class="operator">+</span><span class="operator">+</span>) {
+        <span class="keyword">const</span> item <span class="operator">=</span> chatMessages<span class="operator">.</span>get(i)
+
+        <span class="keyword">if</span> (item<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;system&quot;</span> <span class="operator">|</span><span class="operator">|</span> item<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;user&quot;</span> <span class="operator">|</span><span class="operator">|</span> item<span class="operator">.</span>role <span class="operator">=</span><span class="operator">=</span><span class="operator">=</span> <span class="string">&quot;assistant&quot;</span>)
+            history<span class="operator">.</span>push({ role: item<span class="operator">.</span>role<span class="operator">,</span> content: item<span class="operator">.</span>content })
+    }
+
+    app<span class="operator">.</span>settings<span class="operator">.</span>setValue(chatHistoryKey<span class="operator">,</span> JSON<span class="operator">.</span>stringify(history))
+}</pre>
+<p>On startup, the system prompt is added first, then the saved conversation is parsed and appended after it. A corrupted history file simply results in a fresh chat, it never crashes the app.</p>
+<p>The trash icon in the header opens a confirmation dialog and clears both the model and the stored history. Note that the system prompt is re-added immediately, so the app is ready for a new conversation right away.</p>
+<h2 id="ideas-to-extend-the-app">Ideas to extend the app</h2>
+<p>The demo intentionally keeps things small. If you want to take it further, here are some natural next steps:</p>
+<ul>
+<li>Multiple named conversations, stored as separate history entries.</li>
+<li>Trimming the sent history to the last N messages to stay within the context window.</li>
+<li>A context menu on chat bubbles to copy or delete single messages.</li>
+<li>Rendering markdown in assistant messages.</li>
+</ul>
+<h2 id="appendix-publishing-and-protecting-the-source">Appendix: Publishing and protecting the source</h2>
+<p>For a release build you may want to compile the QML files into the binary instead of shipping them as plain text files in the app package. The steps are already prepared as comments in the <code translate="no">CMakeLists.txt</code> file:</p>
+<ul>
+<li>Comment the <code translate="no">deploy_resources()</code> call.</li>
+<li>Uncomment <code translate="no">QML_FILES</code> and <code translate="no">RESOURCES</code> in the <code translate="no">qt_add_qml_module()</code> call.</li>
+<li>In <code translate="no">main.cpp</code>, switch <code translate="no">setMainQmlFileName()</code> to <code translate="no">&quot;qrc:/qml/Main.qml&quot;</code>.</li>
+</ul>
+<p>This demo contains no secrets in its code: the API key is entered by the user and lives only on their device in the settings store. Never hardcode an API key in the QML sources.</p>
+</div>
+<!-- @@@index.html -->
+</body>
+</html>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE QDOCINDEX>
+<INDEX url="" title="Chatbot" version="" project="Chatbot">
+    <namespace name="" status="active" access="public" module="chatbot">
+        <page name="https://felgo.com/doc/felgo-app/" href="https://felgo.com/doc/felgo-app/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="13" documented="true" subtype="externalpage" title="App" fulltitle="App" subtitle=""/>
+        <page name="https://felgo.com/doc/felgo-applistview/" href="https://felgo.com/doc/felgo-applistview/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="21" documented="true" subtype="externalpage" title="AppListView" fulltitle="AppListView" subtitle=""/>
+        <page name="https://felgo.com/doc/felgo-apptextfield/" href="https://felgo.com/doc/felgo-apptextfield/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="17" documented="true" subtype="externalpage" title="AppTextField" fulltitle="AppTextField" subtitle=""/>
+        <page name="index.html" href="index.html" status="active" location="index.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/index.qdoc" lineno="1" documented="true" subtype="page" title="Chatbot" fulltitle="Chatbot" subtitle="" brief="An OpenAI compatible LLM chatbot written with QML and Felgo">
+            <contents name="introduction" title="Introduction" level="1"/>
+            <contents name="creating-the-project" title="Creating the project" level="1"/>
+            <contents name="the-app-shell-main-qml" title="The app shell: Main.qml" level="1"/>
+            <contents name="displaying-the-messages-chatview-qml" title="Displaying the messages: ChatView.qml" level="1"/>
+            <contents name="remembering-the-configuration-settingsdialog-qml" title="Remembering the configuration: SettingsDialog.qml" level="1"/>
+            <contents name="choosing-a-model-the-model-dropdown" title="Choosing a model: the model dropdown" level="1"/>
+            <contents name="talking-to-the-api-chatapi-qml" title="Talking to the API: ChatApi.qml" level="1"/>
+            <contents name="the-typing-indicator-and-error-handling" title="The typing indicator and error handling" level="1"/>
+            <contents name="keeping-the-conversation" title="Keeping the conversation" level="1"/>
+            <contents name="ideas-to-extend-the-app" title="Ideas to extend the app" level="1"/>
+            <contents name="appendix-publishing-and-protecting-the-source" title="Appendix: Publishing and protecting the source" level="1"/>
+        </page>
+        <page name="https://felgo.com/doc/qt/qml-qtquick-controls-combobox/" href="https://felgo.com/doc/qt/qml-qtquick-controls-combobox/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="25" documented="true" subtype="externalpage" title="ComboBox" fulltitle="ComboBox" subtitle=""/>
+        <page name="https://felgo.com/doc/felgo-httprequest/" href="https://felgo.com/doc/felgo-httprequest/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="5" documented="true" subtype="externalpage" title="HttpRequest" fulltitle="HttpRequest" subtitle=""/>
+        <page name="https://felgo.com/doc/felgo-installation/" href="https://felgo.com/doc/felgo-installation/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="1" documented="true" subtype="externalpage" title="Install Felgo" fulltitle="Install Felgo" subtitle=""/>
+        <page name="https://platform.openai.com/docs/api-reference/chat/create" href="https://platform.openai.com/docs/api-reference/chat/create" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="29" documented="true" subtype="externalpage" title="OpenAI Chat API Reference" fulltitle="OpenAI Chat API Reference" subtitle=""/>
+        <page name="https://felgo.com/doc/felgo-storage/" href="https://felgo.com/doc/felgo-storage/" status="active" location="external-resources.qdoc" filepath="/home/nikunj/Projects/Chatbot/doc/external-resources.qdoc" lineno="9" documented="true" subtype="externalpage" title="Storage" fulltitle="Storage" subtitle=""/>
+    </namespace>
+</INDEX>
